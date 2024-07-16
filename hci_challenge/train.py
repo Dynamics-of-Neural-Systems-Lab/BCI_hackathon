@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from pathlib import Path
 import math
 
+import numpy as np
+
 from safetensors.torch import save_model, load_model
 import torch
 
@@ -86,10 +88,16 @@ def run_train_model(model, datasets, config, device='cuda'):
 
     train_dataset, val_dataset = datasets
     train_loader, val_loader = prepare_data_loaders(train_dataset, val_dataset, config)
+    
+    # construct target covariance matrix
+    #target_covariance = np.corrcoef(np.hstack([train_dataset[i][1] for i in range(len(train_dataset))]))
+    target_covariance = np.corrcoef(np.hstack([train_dataset[i][1] for i in range(200)]))
+    target_covariance = torch.Tensor(target_covariance)
 
     optimizer = torch.optim.AdamW(model.parameters(), 
                                   lr=config.learning_rate, 
                                   weight_decay=config.weight_decay)
+    
     scheduler = init_lr_scheduler(config)
     
     overall_step = 0
@@ -107,13 +115,19 @@ def run_train_model(model, datasets, config, device='cuda'):
             optimizer.zero_grad(set_to_none=True)
             
             inputs, labels = batch
+            
+            inputs = inputs.permute(0,2,1)
+            labels = labels.permute(0,2,1)
+
             # Move data to the specified device
             inputs, labels = inputs.to(device), labels.to(device)
-            loss, _ = model(inputs, labels)
+            outputs, _, mu_z, logvar_z, loss, l1_loss  = model(inputs, targets=labels, target_covariance=target_covariance)
+                                    
             loss.backward()
             
             if config.grad_clip:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), config.grad_clip)
+                
             optimizer.step()
 
             overall_step += 1
@@ -125,16 +139,20 @@ def run_train_model(model, datasets, config, device='cuda'):
                 val_loss_list = []
                 for batch in val_loader:
                     inputs, labels = batch
+                    
+                    inputs = inputs.permute(0,2,1)
+                    labels = labels.permute(0,2,1)
+                    
                     # Move data to the specified device
                     inputs, labels = inputs.to(device), labels.to(device)
                     with torch.no_grad():
-                        val_loss, _ = model(inputs, labels)
-                    val_loss_list.append(val_loss)
+                        _, _, _, _, val_loss, l1_val_loss = model(inputs, targets=labels, target_covariance=target_covariance)
+                    val_loss_list.append(l1_val_loss)
                 
                 mean_val_loss = torch.stack(val_loss_list).mean()
 
                 print('\n')
-                print(f"overall_steps {overall_step}: {loss.item()}")
+                print(f"overall_steps {overall_step}: {l1_loss.item()}")
                 print(f"val loss: {mean_val_loss}")
             
                 if mean_val_loss < best_val_loss:

@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import math
+
 from einops import rearrange
 from simple_parsing import Serializable
 from dataclasses import dataclass
@@ -16,6 +18,8 @@ Model
 5. Prediction: 25 fps
 """
 
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 @dataclass
 class Config(Serializable):
     n_electrodes: int
@@ -27,6 +31,82 @@ class Config(Serializable):
     dilation: int
     strides: List[int]
     small_strides: List[int]
+    
+def compute_sine_cosine(v, num_terms):
+    num_terms = torch.tensor(num_terms).to(device)
+    v = v.to(device)
+
+    # Compute the angles for all terms
+    angles = torch.tensor(2**torch.arange(num_terms).float().to(device) * torch.tensor(math.pi).to(device) * v.unsqueeze(-1)).to(device)
+
+    # Compute sine and cosine values for all angles
+    sine_values = torch.sin(angles)
+    cosine_values = torch.cos(angles)
+
+    # Reshape sine and cosine values for concatenation
+    sine_values = sine_values.reshape(*sine_values.shape[:-2], -1)
+    cosine_values = cosine_values.reshape(*cosine_values.shape[:-2], -1)
+
+    # Concatenate sine and cosine values along the last dimension
+    result = torch.cat((sine_values, cosine_values), dim=-1)
+
+    return result
+
+
+def compute_sine_cosine_time_series(v, num_terms):
+    """
+    Compute sine and cosine embeddings for time-series data.
+    
+    Args:
+        v (torch.Tensor): Input data of shape (batch_size, timesteps, features).
+        num_terms (int): Number of sine and cosine terms to compute.
+        
+    Returns:
+        torch.Tensor: Sine and cosine embeddings of shape (batch_size, timesteps, features * 2 * num_terms).
+    """
+    device = v.device
+    batch_size, timesteps, features = v.shape
+    num_terms = torch.tensor(num_terms).to(device)
+    
+    # Initialize the result tensor
+    result = torch.empty(batch_size, timesteps, features * 2 * num_terms).to(device)
+    
+    for t in range(timesteps):
+        v_t = v[:, t, :]  # Shape: (batch_size, features)
+        angles = (2 ** torch.arange(num_terms).float().to(device) * math.pi * v_t.unsqueeze(-1)).to(device)
+        
+        # Compute sine and cosine values for all angles
+        sine_values = torch.sin(angles)
+        cosine_values = torch.cos(angles)
+        
+        # Reshape sine and cosine values for concatenation
+        sine_values = sine_values.reshape(batch_size, -1)
+        cosine_values = cosine_values.reshape(batch_size, -1)
+        
+        # Concatenate sine and cosine values along the last dimension
+        result[:, t, :] = torch.cat((sine_values, cosine_values), dim=-1)
+    
+    return result
+
+class Sinusoidal_embedding(nn.Module):
+    def __init__(self, input_size, emb_dim):
+        super().__init__()         
+       
+        self.mlp_nums = nn.Sequential(nn.Linear(16 * input_size, 16 * input_size),  # this should be 16 * n_nums, 16 * n_nums
+                                      nn.SiLU(),
+                                      nn.Linear(16 * input_size, 16 * input_size))
+            
+        self.mlp_output = nn.Sequential(nn.Linear(16 * input_size, emb_dim), # this should be 16 * n_nums, 16 * n_nums
+                                       nn.ReLU(),
+                                       nn.Linear(emb_dim, input_size))
+        
+    def forward(self, x):        
+       
+        x_encoding = compute_sine_cosine_time_series(x, num_terms=8)       
+        
+        emb = self.mlp_output(x_encoding)
+        
+        return emb
 
 class TuneModule(nn.Module):
     def __init__(self, n_electrodes=8, temperature=5):
@@ -271,6 +351,9 @@ class HVATNetv3(nn.Module):
 
         self.denoiser = nn.Sequential(*[SimpleResBlock(config.n_filters, config.kernel_size) for _ in range(config.n_res_blocks)])
 
+        self.sinusoidal_embedder = Sinusoidal_embedding(config.n_filters, config.n_filters)        
+
+
         self.encoder = AdvancedEncoder(n_blocks_per_layer=config.n_blocks_per_layer,
                                        n_filters=config.n_filters, kernel_size=config.kernel_size,
                                        dilation=config.dilation, strides=config.strides)
@@ -307,10 +390,13 @@ class HVATNetv3(nn.Module):
         # denoising part
         x = self.spatial_reduce(x)
         x = self.denoiser(x)
+        
+        # get sinusoidal embedding
+        x = self.sinusoidal_embedder(x.permute(0,2,1))
 
         # extract features
         # TODO: add mapper and change encoder to return all features
-        outputs = self.encoder(x)
+        outputs = self.encoder(x.permute(0,2,1))
         emg_features = outputs[-1] # 25 fps features
         
         # decode features
