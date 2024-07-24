@@ -15,12 +15,23 @@ from tqdm import tqdm
 from utils.augmentations import get_default_transform
 from utils import creating_dataset
 
+# hyperparameters
+h_dim = 100
+z_dim = 16
+n_layers = 1
+n_epochs = 25
+clip = 10
+learning_rate = 1e-3
+batch_size = 256  # 128
+seed = 128
+print_every = 1000  # batches
+save_every = 10  # epochs
 
 DATA_PATH = "/home/moritz/Projects/BCI_hackathon/data/dataset_v2_blocks"
 train_config = TrainConfig(
     exp_name="test_2_run_fedya",
     p_augs=0.3,
-    batch_size=64,
+    batch_size=batch_size,
     eval_interval=150,
     num_workers=8,
 )
@@ -131,18 +142,6 @@ if torch.cuda.is_available():
     torch.cuda.empty_cache()
 else:
     device = torch.device("cpu")
-
-# hyperparameters
-h_dim = 100
-z_dim = 16
-n_layers = 1
-n_epochs = 25
-clip = 10
-learning_rate = 1e-3
-batch_size = 128  # 128
-seed = 128
-print_every = 1000  # batches
-save_every = 10  # epochs
 
 # manual seed
 torch.manual_seed(seed)
