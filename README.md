@@ -9,3 +9,22 @@ Please refere to `tutorials/04_submit_predictions.ipynb` for more details on how
 You can access the data on the MUW HPC at the below path (data is stored in the "dataset_v2_blocks/dataset_v2_blocks/"):
 /msc/home/vsharm64/projects/BCI_Kaggle
 
+
+# For installing mamba-ssm it required me to manually install nvcc onto MUW HPC
+Add to your .bashrc the following:
+```
+# Adding cuda driver 12 based on Moritz’s fix
+export LD_LIBRARY_PATH=/msc/home/mschae83/NVIDIA-Linux-x86_64-535.129.03/
+# Adding nvcc
+export PATH=/msc/home/vsharm64/cuda_VS/bin:$PATH
+```
+
+Then run
+```
+source ~/.bashrc
+```
+
+After entering your environment (i.e. ALVI) run:
+```
+pip install --no-build-isolation mamba-ssm
+```
