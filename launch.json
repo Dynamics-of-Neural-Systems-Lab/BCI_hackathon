@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "python",
+            "request": "launch",
+            "name": "Train VRNN",
+            "program": "${workspaceFolder}/train_vrnn.py",
+            "args": [
+            ],
+            "cwd": "${workspaceFolder}",
+            "module": null,
+            "justMyCode": true,
+        },
+    ],
+}

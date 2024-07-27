@@ -18,7 +18,7 @@ EPS = torch.finfo(torch.float).eps  # numerical logs
 
 
 class VRNN(nn.Module):
-    def __init__(self, x_dim, h_dim, z_dim, n_layers, bias=False):
+    def __init__(self, x_dim, h_dim, z_dim, n_layers, y_dim, bias=False):
         super(VRNN, self).__init__()
 
         self.x_dim = x_dim
@@ -28,31 +28,31 @@ class VRNN(nn.Module):
 
         # feature-extracting transformations
         self.phi_x = nn.Sequential(
-            nn.Linear(x_dim, h_dim), nn.ReLU(), nn.Linear(h_dim, h_dim), nn.ReLU()
+            nn.Linear(x_dim, h_dim), nn.SiLU(), nn.Linear(h_dim, h_dim), nn.SiLU()
         )
-        self.phi_z = nn.Sequential(nn.Linear(z_dim, h_dim), nn.ReLU())
+        self.phi_z = nn.Sequential(nn.Linear(z_dim, h_dim), nn.SiLU())
 
         # encoder
         self.enc = nn.Sequential(
             nn.Linear(h_dim + h_dim, h_dim),
-            nn.ReLU(),
+            nn.SiLU(),
             nn.Linear(h_dim, h_dim),
-            nn.ReLU(),
+            nn.SiLU(),
         )
         self.enc_mean = nn.Linear(h_dim, z_dim)
         self.enc_std = nn.Sequential(nn.Linear(h_dim, z_dim), nn.Softplus())
 
         # prior
-        self.prior = nn.Sequential(nn.Linear(h_dim, h_dim), nn.ReLU())
+        self.prior = nn.Sequential(nn.Linear(h_dim, h_dim), nn.SiLU())
         self.prior_mean = nn.Linear(h_dim, z_dim)
         self.prior_std = nn.Sequential(nn.Linear(h_dim, z_dim), nn.Softplus())
 
         # decoder
         self.dec = nn.Sequential(
             nn.Linear(h_dim + h_dim, h_dim),
-            nn.ReLU(),
+            nn.SiLU(),
             nn.Linear(h_dim, h_dim),
-            nn.ReLU(),
+            nn.SiLU(),
         )
         self.dec_std = nn.Sequential(nn.Linear(h_dim, x_dim), nn.Softplus())
         # self.dec_mean = nn.Linear(h_dim, x_dim)
@@ -61,13 +61,19 @@ class VRNN(nn.Module):
         # recurrence
         self.rnn = nn.GRU(h_dim + h_dim, h_dim, n_layers, bias)
 
-    def forward(self, x):
+        # supervision head
 
+        self.supervised_head = nn.Sequential(
+            nn.Linear(h_dim, h_dim), nn.SiLU(), nn.Linear(h_dim, y_dim)
+        )
+
+    def forward(self, x, y=None):
         all_enc_mean, all_enc_std = [], []
         all_dec_mean, all_dec_std = [], []
+        all_y_pred = []
         kld_loss = 0
         nll_loss = 0
-
+        y_loss = 0
         h = torch.zeros(self.n_layers, x.size(1), self.h_dim, device=device)
         for t in range(x.size(0)):
 
@@ -102,16 +108,25 @@ class VRNN(nn.Module):
             nll_loss += self._nll_gauss(dec_mean_t, dec_std_t, x[t])
             # nll_loss += self._nll_bernoulli(dec_mean_t, x[t])
 
+            y_pred = self.supervised_head(h[-1])
+            if y is not None:
+
+                mse_loss = nn.MSELoss()
+                y_loss += mse_loss(y_pred, y[:, :, t])
+
             all_enc_std.append(enc_std_t)
             all_enc_mean.append(enc_mean_t)
             all_dec_mean.append(dec_mean_t)
             all_dec_std.append(dec_std_t)
+            all_y_pred.append(y_pred)
 
         return (
             kld_loss,
             nll_loss,
+            y_loss,
             (all_enc_mean, all_enc_std),
             (all_dec_mean, all_dec_std),
+            all_y_pred,
         )
 
     def sample(self, seq_len):
@@ -173,7 +188,8 @@ class VRNN(nn.Module):
         )
 
     def _nll_gauss(self, mean, std, x):
-        return torch.sum(
+        std_clamped = std + 1
+        return torch.mean(
             torch.log(std + EPS)
             + torch.log(torch.tensor(2 * torch.pi)) / 2
             + (x - mean).pow(2) / (2 * std.pow(2))
