@@ -145,6 +145,6 @@ def run_train_model(model, datasets, config, device='cuda'):
                 print('\n')
                 model.train()
             
-            if overall_step > config.max_steps:
-                print('Complete training')
-                break
+        if overall_step > config.max_steps:
+            print('Complete training')
+            break
