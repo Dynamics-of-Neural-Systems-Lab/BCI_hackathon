@@ -108,11 +108,13 @@ class VRNN(nn.Module):
             nll_loss += self._nll_gauss(dec_mean_t, dec_std_t, x[t])
             # nll_loss += self._nll_bernoulli(dec_mean_t, x[t])
 
-            y_pred = self.supervised_head(h[-1])
+            y_pred = self.supervised_head(h[-1])  # phi_z_t)  # h[-1])
             if y is not None:
 
-                mse_loss = nn.MSELoss()
-                y_loss += mse_loss(y_pred, y[:, :, t])
+                loss = nn.MSELoss()
+                # loss = nn.L1Loss()
+
+                y_loss += loss(y_pred, y[:, :, t])  # L1 loss
 
             all_enc_std.append(enc_std_t)
             all_enc_mean.append(enc_mean_t)

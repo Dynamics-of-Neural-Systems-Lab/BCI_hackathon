@@ -1,13 +1,10 @@
 """
 Training with VRNN
 This file was tangled by /home/moritz/wiki/roam/adopt_vrnn_architecture_for_unsupervised_learning_of_sequential_data_issue_1_dynamics_of_neural_systems_lab_bci_hackathon.org
-
-DONT modify here!
 """
 
 import os
 import sys
-
 sys.path.insert(1, "/home/moritz/Projects/BCI_hackathon/")  # TODO
 import torch
 import torch.nn as nn
@@ -16,12 +13,15 @@ from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 from VariationalRecurrentNeuralNetwork.model import VRNN
 from utils.train import TrainConfig
+import pandas as pd
 
 from tqdm import tqdm
 
 from utils.augmentations import get_default_transform
 from utils import creating_dataset
+from pathlib import Path
 
+DATA_PATH = Path("/home/moritz/Projects/BCI_hackathon/data/dataset_v2_blocks")
 # hyperparameters
 n_layers = 1
 n_epochs = 4
@@ -37,7 +37,6 @@ train_config = TrainConfig(
     eval_interval=150,
     num_workers=0,
 )
-
 
 def get_dataset(train_config):
     ## Data preparation
@@ -65,7 +64,6 @@ def preprocess_batch(data):
     data = data.to(torch.float32)
 
     return data
-
 
 def train(train_loader, epoch):
     train_loss = 0
@@ -112,7 +110,6 @@ def train(train_loader, epoch):
         )
     )
 
-
 def test(test_loader, epoch):
     """uses test data to evaluate
     likelihood of the model"""
@@ -139,7 +136,6 @@ def test(test_loader, epoch):
             mean_kld_loss, mean_nll_loss, mean_y_loss
         )
     )
-
 
 # changing device
 if torch.cuda.is_available():
