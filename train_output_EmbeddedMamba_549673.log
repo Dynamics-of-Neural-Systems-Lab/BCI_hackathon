@@ -1,0 +1,79 @@
+/msc/home/alopez22/miniconda3/envs/ALVI/lib/python3.9/site-packages/mamba_ssm/ops/selective_scan_interface.py:164: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(ctx, xz, conv1d_weight, conv1d_bias, x_proj_weight, delta_proj_weight,
+/msc/home/alopez22/miniconda3/envs/ALVI/lib/python3.9/site-packages/mamba_ssm/ops/selective_scan_interface.py:240: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, dout):
+/msc/home/alopez22/miniconda3/envs/ALVI/lib/python3.9/site-packages/mamba_ssm/ops/triton/layer_norm.py:986: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(
+/msc/home/alopez22/miniconda3/envs/ALVI/lib/python3.9/site-packages/mamba_ssm/ops/triton/layer_norm.py:1045: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, dout, *args):
+/msc/home/alopez22/miniconda3/envs/ALVI/lib/python3.9/site-packages/mamba_ssm/distributed/tensor_parallel.py:26: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(ctx, x, weight, bias, process_group=None, sequence_parallel=True):
+/msc/home/alopez22/miniconda3/envs/ALVI/lib/python3.9/site-packages/mamba_ssm/distributed/tensor_parallel.py:62: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, grad_output):
+/msc/home/alopez22/miniconda3/envs/ALVI/lib/python3.9/site-packages/mamba_ssm/ops/triton/ssd_combined.py:758: FutureWarning: `torch.cuda.amp.custom_fwd(args...)` is deprecated. Please use `torch.amp.custom_fwd(args..., device_type='cuda')` instead.
+  def forward(ctx, zxbcdt, conv1d_weight, conv1d_bias, dt_bias, A, D, chunk_size, initial_states=None, seq_idx=None, dt_limit=(0.0, float("inf")), return_final_states=False, activation="silu",
+/msc/home/alopez22/miniconda3/envs/ALVI/lib/python3.9/site-packages/mamba_ssm/ops/triton/ssd_combined.py:836: FutureWarning: `torch.cuda.amp.custom_bwd(args...)` is deprecated. Please use `torch.amp.custom_bwd(args..., device_type='cuda')` instead.
+  def backward(ctx, dout, *args):
+/msc/home/alopez22/miniconda3/envs/ALVI/lib/python3.9/site-packages/torch/nn/modules/conv.py:304: UserWarning: Using padding='same' with even kernel lengths and odd dilation may require a zero-padded copy of the input be created (Triggered internally at /opt/conda/conda-bld/pytorch_1720538643151/work/aten/src/ATen/native/Convolution.cpp:1031.)
+  return F.conv1d(input, weight, bias, self.stride,
+/msc/home/alopez22/BCI_hackathon/Model/mamba_net.py:522: UserWarning: Using a target size (torch.Size([64, 20, 32])) that is different to the input size (torch.Size([64, 25, 32])). This will likely lead to incorrect results due to broadcasting. Please ensure they have the same size.
+  loss = F.l1_loss(pred, targets)
+Getting val datasets
+Number of moves: 72 | Dataset: fedya_tropin_standart_elbow_left
+Reorder this dataset fedya_tropin_standart_elbow_left True
+Getting train datasets
+Number of moves: 72 | Dataset: fedya_tropin_standart_elbow_left
+Reorder this dataset fedya_tropin_standart_elbow_left True
+Number of moves: 70 | Dataset: valery_first_standart_elbow_left
+Reorder this dataset valery_first_standart_elbow_left True
+Number of moves: 135 | Dataset: alex_kovalev_standart_elbow_left
+Reorder this dataset alex_kovalev_standart_elbow_left True
+Number of moves: 72 | Dataset: anna_makarova_standart_elbow_left
+Reorder this dataset anna_makarova_standart_elbow_left True
+Number of moves: 62 | Dataset: artem_snailbox_standart_elbow_left
+Reorder this dataset artem_snailbox_standart_elbow_left True
+Number of moves: 144 | Dataset: matthew_antonov_standart_elbow_left
+Reorder this dataset matthew_antonov_standart_elbow_left True
+Number of moves: 144 | Dataset: misha_korobok_standart_elbow_left
+Reorder this dataset misha_korobok_standart_elbow_left True
+Number of moves: 71 | Dataset: nikita_snailbox_standart_elbow_left
+Reorder this dataset nikita_snailbox_standart_elbow_left True
+Number of moves: 144 | Dataset: petya_chizhov_standart_elbow_left
+Reorder this dataset petya_chizhov_standart_elbow_left True
+Number of moves: 12 | Dataset: polina_maksimova_standart_elbow_left
+Reorder this dataset polina_maksimova_standart_elbow_left True
+Number of moves: 144 | Dataset: sema_duplin_standart_elbow_left
+Reorder this dataset sema_duplin_standart_elbow_left True
+Number of moves: 136 | Dataset: alex_kovalev_standart_elbow_right
+Number of moves: 69 | Dataset: andrew_snailbox_standart_elbow_right
+Number of moves: 132 | Dataset: anna_makarova_standart_elbow_right
+Number of moves: 67 | Dataset: artem_snailbox_standart_elbow_right
+Number of moves: 68 | Dataset: matthew_antonov_standart_elbow_right
+Number of moves: 72 | Dataset: matvey_gorbenko_standart_elbow_right
+Number of moves: 144 | Dataset: misha_korobok_standart_elbow_right
+Number of moves: 55 | Dataset: nikita_snailbox_standart_elbow_right
+Number of moves: 142 | Dataset: petya_chizhov_standart_elbow_right
+Number of moves: 54 | Dataset: polina_maksimova_standart_elbow_right
+Number of moves: 139 | Dataset: sema_duplin_standart_elbow_right
+Number of trainining sessions: 22
+Number of validation sessions: 1
+Size of the input (8, 256) || Size of the output (20, 32)
+Number of parameters: 358929
+Total: 0.36M, Trainable: 0.36M
+Completed initialization of scheduler
+Traceback (most recent call last):
+  File "/msc/home/alopez22/BCI_hackathon/train.py", line 54, in <module>
+    run_train_model(model, (train_dataset, test_dataset), train_config, device)
+  File "/msc/home/alopez22/BCI_hackathon/utils/train.py", line 112, in run_train_model
+    loss, _ = model(inputs, labels)
+  File "/msc/home/alopez22/miniconda3/envs/ALVI/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1553, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/msc/home/alopez22/miniconda3/envs/ALVI/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1562, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/msc/home/alopez22/BCI_hackathon/Model/mamba_net.py", line 522, in forward
+    loss = F.l1_loss(pred, targets)
+  File "/msc/home/alopez22/miniconda3/envs/ALVI/lib/python3.9/site-packages/torch/nn/functional.py", line 3353, in l1_loss
+    expanded_input, expanded_target = torch.broadcast_tensors(input, target)
+  File "/msc/home/alopez22/miniconda3/envs/ALVI/lib/python3.9/site-packages/torch/functional.py", line 77, in broadcast_tensors
+    return _VF.broadcast_tensors(tensors)  # type: ignore[attr-defined]
+RuntimeError: The size of tensor a (25) must match the size of tensor b (20) at non-singleton dimension 1

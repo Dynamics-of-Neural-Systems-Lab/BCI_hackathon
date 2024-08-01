@@ -448,6 +448,229 @@ class MambaModel(nn.Module):
         return y_pred.T
 
 
+class RawMambaModel(nn.Module):
+    """
+    This is a MAMBA model for the task with only convolutions and Mamba. 
+
+    -Initial Denoising
+    -Spatial Convolution to increase dimensionality
+    -MAMBA block
+    -Space-time convolution to map again 
+
+    """
+    config = Config
+    def __init__(self, config: Config):
+        super(RawMambaModel, self).__init__()
+
+        # Use the configuration from the dataclass
+        self.n_inp_features = config.n_electrodes
+        self.n_channels_out = config.n_channels_out
+        self.model_depth = len(config.strides)
+
+        #Different layers of the network
+
+        self.tune_module = TuneModule(n_electrodes=config.n_electrodes, temperature=5.0)
+
+        self.augment_channels = nn.Conv1d(config.n_electrodes, config.n_filters, kernel_size = config.n_electrodes, padding = 'same')
+       
+
+        self.mamba = MambaModule(model_dim = config.n_filters, nlayers = 3)
+
+        self.downsampling = nn.Conv2d (in_channels=1, 
+                                out_channels=1, 
+                                kernel_size= (8, 8),  # Example kernel size, can be adjusted
+                                stride= (5, 8),       # Example stride to downsample t by a factor of 8
+                                padding=(2,1))      # Example padding to maintain dimensions
+
+
+        # Get number of parameters
+        self.n_params = sum(p.numel() for p in self.parameters())
+        print('Number of parameters:', self.n_params)
+
+    def forward(self, x, targets=None):
+        """
+        x: [batch, n_electrodes, time]
+        targets: loss calculation with the same shape as x.
+    
+        """
+        # tune inputs to model
+        x = self.tune_module(x)
+
+        x = self.augment_channels(x)
+
+        features = x.permute(0, 2, 1)
+        res = self.mamba(features)
+        x = res.permute(0, 2, 1)
+
+        
+        # Add an extra dimension for Conv2d
+        x = x.unsqueeze(1)  # (b, s, t) -> (b, 1, s, t)
+
+
+        # Apply Conv2d
+        x = self.downsampling(x)
+
+
+        pred = x.squeeze(1)
+
+
+
+
+        if targets is None:
+            return pred
+        
+        loss = F.l1_loss(pred, targets)
+        return loss, pred
+
+    def _to_quats_shape(self, x):
+        batch, n_outs, time = x.shape
+        x = x.reshape(batch, -1, 4, time)
+        
+        if self.training: 
+            return x 
+        else: 
+            return F.normalize(x, p=2.0, dim=2)
+        
+    @property
+    def dtype(self) -> torch.dtype:
+        return next(self.parameters()).dtype
+
+    @property
+    def device(self) -> torch.device:
+        return next(self.parameters()).device
+
+    @torch.no_grad()
+    def inference(self, myo):
+        """
+        Params:
+            myo: is numpy array with shape (time, n_electrodes)
+        Return
+            numpy array with shape (N_timestamps, 20)
+        """
+        self.eval()
+
+        x = torch.from_numpy(myo)
+
+        t, c = x.shape
+        x = rearrange(x, 't c -> 1 c t', t=t, c=c)
+        x = x.to(self.device).to(self.dtype)
+        
+        y_pred = self(x, targets=None)
+        y_pred = y_pred[0].to('cpu').detach().numpy()
+
+        return y_pred.T
+
+
+
+
+
+
+class EncodedMamba (nn.Module):
+    """
+    This mamba model is based on the HVAT network encoding/downsampling proposed as the baseline model, 
+    but the core of it is a MAMBA module
+
+    """
+    config = Config
+    def __init__(self, config: Config):
+        super(EncodedMamba, self).__init__()
+
+        # Use the configuration from the dataclass
+        self.n_inp_features = config.n_electrodes
+        self.n_channels_out = config.n_channels_out
+        self.model_depth = len(config.strides)
+
+        self.tune_module = TuneModule(n_electrodes=config.n_electrodes, temperature=5.0)
+
+        self.augment_channels = nn.Conv1d(config.n_electrodes, config.n_filters, kernel_size = config.n_electrodes, padding = 'same')
+
+
+        self.time_downsampling_and_space_conv = AdvancedEncoder(n_blocks_per_layer=config.n_blocks_per_layer,
+                                       n_filters=config.n_filters, kernel_size=config.kernel_size,
+                                       dilation=config.dilation, strides=config.strides)
+
+
+        self.mamba = MambaModule(model_dim = config.n_filters, nlayers = 3)
+
+        # self.rnn = RNN(input_size=config.n_filters, hidden_size=config.n_filters, num_layers=5, output_size=config.n_filters)
+        self.space_downsampling = nn.Conv1d(config.n_filters, config.n_channels_out, kernel_size=1, padding='same')
+
+
+
+
+        # Get number of parameters
+        self.n_params = sum(p.numel() for p in self.parameters())
+        print('Number of parameters:', self.n_params)
+
+    def forward(self, x, targets=None):
+        """
+        x: [batch, n_electrodes, time]
+        targets: loss calculation with the same shape as x.
+    
+        """
+        # tune inputs to model
+        x = self.tune_module(x)
+
+        x = self.augment_channels(x)
+
+        features = x.permute(0, 2, 1) # size [batch, n_filters, time]
+        res = self.mamba(features)
+        x = res.permute(0, 2, 1)
+
+        #Encoder for downsampling the "space" domain
+        x = self.time_downsampling_and_space_conv(x)[-1]
+        
+        # Downsampling the "time" domain
+        pred = self.space_downsampling(x)
+
+        if targets is None:
+            return pred
+        
+        loss = F.l1_loss(pred, targets)
+        return loss, pred
+
+    def _to_quats_shape(self, x):
+        batch, n_outs, time = x.shape
+        x = x.reshape(batch, -1, 4, time)
+        
+        if self.training: 
+            return x 
+        else: 
+            return F.normalize(x, p=2.0, dim=2)
+        
+    @property
+    def dtype(self) -> torch.dtype:
+        return next(self.parameters()).dtype
+
+    @property
+    def device(self) -> torch.device:
+        return next(self.parameters()).device
+
+    @torch.no_grad()
+    def inference(self, myo):
+        """
+        Params:
+            myo: is numpy array with shape (time, n_electrodes)
+        Return
+            numpy array with shape (N_timestamps, 20)
+        """
+        self.eval()
+
+        x = torch.from_numpy(myo)
+
+        t, c = x.shape
+        x = rearrange(x, 't c -> 1 c t', t=t, c=c)
+        x = x.to(self.device).to(self.dtype)
+        
+        y_pred = self(x, targets=None)
+        y_pred = y_pred[0].to('cpu').detach().numpy()
+
+        return y_pred.T
+
+
+
+
+
 # start python code 
 if __name__ == '__main__':
     

@@ -6,7 +6,7 @@
 #SBATCH --gres=gpu:a100:1
 #SBATCH --mem=256G
 #SBATCH --job-name=train_job
-#SBATCH --output=train_output_%j.log
+#SBATCH --output=train_output_EmbeddedMamba_%j.log
 
 # Load necessary modules (if applicable)
 

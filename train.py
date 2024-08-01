@@ -9,14 +9,14 @@ from utils.train import TrainConfig, run_train_model
 from utils.augmentations import get_default_transform
 from utils import creating_dataset
 
-#from Model.mamba_net import MambaModel, Config
-#import Model.mamba_net
+from Model.mamba_net import MambaModel, Config, RawMambaModel, EncodedMamba
+import Model.mamba_net
 
-from utils.hvatnet import HVATNetv3, Config
-import utils.hvatnet
+#from utils.hvatnet import HVATNetv3, Config
+#import utils.hvatnet
 
 
-train_config = TrainConfig(exp_name='baseline', p_augs=0.3, batch_size=64, eval_interval=150, num_workers=0)
+train_config = TrainConfig(exp_name='Embedded_MAMBA', p_augs=0.3, batch_size=64, eval_interval=150, num_workers=0)
 
 
 DATA_PATH = "/msc/home/alopez22/BCI_hackathon/dataset_v2_blocks"
@@ -44,7 +44,8 @@ model_config = Config(n_electrodes=8, n_channels_out=20,
                             strides=(2, 2, 2), dilation=2, 
                             small_strides = (2, 2))
 #model = MambaModel(model_config)
-model = HVATNetv3(model_config)
+#model = HVATNetv3(model_config)
+model = EncodedMamba(model_config)
 count_parameters(model)
 
 
